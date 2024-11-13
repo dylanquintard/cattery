@@ -13,20 +13,17 @@ mongoose.connect(process.env.MONGODB_URI)  // Utiliser la variable d'environneme
 
 const app = express();
 
+// Utilisation du middleware CORS
 app.use(cors());
 
+// Utilisation de body-parser pour parser les requêtes JSON
 app.use(bodyParser.json());
 
-app.use((req, res, next) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type');
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  next();
-});
-
-app.use('/api/cats', catsRoutes);
+// Si vous avez des routes statiques (comme des fichiers), vous pouvez les ajouter ici
 app.use('/files', express.static(path.join(__dirname, 'files')));
 
+// Routes pour l'API
+app.use('/api/cats', catsRoutes);
 
+// Ne pas avoir besoin de définir manuellement les en-têtes CORS ici, car `cors()` s'en charge
 module.exports = app;
