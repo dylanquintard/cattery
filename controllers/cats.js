@@ -1,35 +1,46 @@
 const sharp = require('sharp');
-const Cats = require('../models/Cats');  // Ensure the path is correct
+const Cats = require('../models/Cats');
 
 exports.createCat = async (req, res, next) => {
   try {
-    if (!req.body.cat) {
-      throw new Error("Cat data is missing.");
+    // Vérifier que les champs requis sont présents
+    const { titre, description } = req.body;
+    if (!titre || !description) {
+      console.error("Missing title or description.");
+      throw new Error("Missing title or description.");
     }
-    const catObject = JSON.parse(req.body.cat);
-    delete catObject._id;
 
-    // Use Sharp for compression and conversion to webp
-    const { buffer } = req.file;
-    const timestamp = Date.now();
-    const fileName = `${timestamp}.webp`;
-    const outputPath = `./files/${fileName}`;
+    const catObject = { titre, description };
 
-    await sharp(buffer)
-      .webp({ quality: 20 })
-      .toFile(outputPath);
+    let imageUrl = '';  // Par défaut, pas d'image
 
-    const newCat = new Cats(catObject);
-    newCat.image = `/files/${fileName}`;
+    // Si un fichier est présent, traiter l'image
+    if (req.file) {
+      console.log("Image received, processing...");
+      const { buffer } = req.file;
+      const timestamp = Date.now();
+      const fileName = `${timestamp}.webp`;
+      const outputPath = `./files/${fileName}`;
+
+      await sharp(buffer)
+        .webp({ quality: 20 })
+        .toFile(outputPath);
+
+      imageUrl = `/files/${fileName}`;
+    } else {
+      console.log("No image provided.");
+    }
+
+    const newCat = new Cats({ ...catObject, image: imageUrl });
 
     await newCat.save();
 
     res.status(201).json({ message: 'Cat saved!' });
   } catch (error) {
-    console.error(error.message);
-    console.error(req.body);
-    console.error(req.file);
-    res.status(400).json({ error: 'Error while creating the cat' });
+    console.error("Error:", error.message);
+    console.error("Request Body:", req.body);
+    console.error("Uploaded File:", req.file);
+    res.status(400).json({ error: error.message });
   }
 };
 
