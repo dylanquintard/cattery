@@ -1,46 +1,33 @@
-const sharp = require('sharp');
 const Cats = require('../models/Cats');
 
 exports.createCat = async (req, res, next) => {
   try {
-    // Vérifier que les champs requis sont présents
-    const { titre, description } = req.body;
-    if (!titre || !description) {
-      console.error("Missing title or description.");
-      throw new Error("Missing title or description.");
+    // Extraire les champs du formulaire, y compris la catégorie
+    const { titre, description, imageUrls, categorie } = req.body; // Maintenant on prend aussi 'imageUrls' en entrée
+
+    // Vérifier que la catégorie est valide
+    const validCategories = ['mâles', 'femelles', 'chatons', 'nés chez nous', 'retraités'];
+    if (!validCategories.includes(categorie)) {
+      return res.status(400).json({ error: "Catégorie invalide" });
     }
 
-    const catObject = { titre, description };
+    // Créer une nouvelle instance du modèle Cats avec les URL des images et la catégorie
+    const newCat = new Cats({
+      titre,
+      description,
+      images: imageUrls,  // Enregistre un tableau d'URLs d'images
+      categorie,         // Enregistre la catégorie
+    });
 
-    let imageUrl = '';  // Par défaut, pas d'image
+    // Enregistrer l'instance dans la base de données
+    const savedCat = await newCat.save();
 
-    // Si un fichier est présent, traiter l'image
-    if (req.file) {
-      console.log("Image received, processing...");
-      const { buffer } = req.file;
-      const timestamp = Date.now();
-      const fileName = `${timestamp}.webp`;
-      const outputPath = `./files/${fileName}`;
-
-      await sharp(buffer)
-        .webp({ quality: 20 })
-        .toFile(outputPath);
-
-      imageUrl = `/files/${fileName}`;
-    } else {
-      console.log("No image provided.");
-    }
-
-    const newCat = new Cats({ ...catObject, image: imageUrl });
-
-    await newCat.save();
-
-    res.status(201).json({ message: 'Cat saved!' });
+    // Répondre avec succès
+    res.status(201).json({ message: "Chat ajouté avec succès !", newCat: savedCat });
   } catch (error) {
-    console.error("Error:", error.message);
-    console.error("Request Body:", req.body);
-    console.error("Uploaded File:", req.file);
-    res.status(400).json({ error: error.message });
+    // Gérer les erreurs
+    console.error(error);
+    res.status(400).json({ error: "Erreur lors de l'ajout du chat" });
   }
 };
 
@@ -76,31 +63,28 @@ exports.getOneCat = (req, res, next) => {
 
 exports.modifyCat = async (req, res, next) => {
   try {
-    console.log(req.file);
-    const catObject = req.file ? {
-      ...JSON.parse(req.body.cat),
-      image: `${req.protocol}://${req.get('host')}/files/${req.file.filename}`
-    } : { ...req.body };
+    // Extraire les champs de la requête
+    const { titre, description, images, categorie } = req.body; // Utiliser "images" au lieu de "imageUrl"
 
-    if (req.file) {
-      // Use Sharp for compression and conversion to webp
-      const { buffer } = req.file;
-      const timestamp = Date.now();
-      const fileName = `${timestamp}.webp`;
-      const outputPath = `./files/${fileName}`;
-
-      await sharp(buffer)
-        .webp({ quality: 20 })
-        .toFile(outputPath);
-
-      // Update image URL with the new webp file
-      catObject.image = `/files/${fileName}`;
+    // Vérifier que la catégorie est valide
+    const validCategories = ['mâles', 'femelles', 'chatons', 'nés chez nous', 'retraités'];
+    if (!validCategories.includes(categorie)) {
+      return res.status(400).json({ error: "Catégorie invalide" });
     }
 
-    await Cats.updateOne({ _id: req.params.id }, { ...catObject, _id: req.params.id });
-    res.status(200).json({ message: 'Object modified!' });
+    // Créer l'objet de modification, en incluant les URLs des images
+    const updatedCat = {
+      titre,
+      description,
+      images,  // Utiliser le tableau d'URLs d'images
+      categorie,
+    };
+
+    // Mettre à jour le chat dans la base de données
+    await Cats.updateOne({ _id: req.params.id }, updatedCat);
+    res.status(200).json({ message: 'Chat modifié avec succès !' });
   } catch (error) {
-    res.status(500).json({ error: 'Error while modifying the cat' });
+    res.status(500).json({ error: 'Erreur lors de la modification du chat' });
   }
 };
 

@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
 
-const catsSchema = mongoose.Schema({
-    titre: { type: String, required: true },
-    image: { type: String },
-    description: { type: String, required: true },
+const catSchema = mongoose.Schema({
+  titre: { type: String, required: true },
+  description: { type: String, required: true },
+  images: [{ type: String, required: true }],  // Array of image URLs
+  categorie: { type: String, required: true },
 });
 
-module.exports = mongoose.model('Cats', catsSchema);
+module.exports = mongoose.model('Cat', catSchema);
